@@ -29,6 +29,7 @@
     border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 600; text-align: center; }
   .t.empty { color: var(--empty); font-weight: 400; border-style: dashed; }
   .t.filled { border-color: var(--accent); }
+  .t.fixed { background: #c62828; border-color: #8e0000; color: #fff; }
   .note { color: var(--empty); font-size: .85rem; }
 </style>
 </head>
@@ -41,7 +42,9 @@
 <script>
 const MEMBERS = ["Dennis","Dominicus","Farrel","Frederick","Johan","Malik","Okto","Tubagus","Wahyu","Yodivan"];
 // Clusters of rows (table counts). Rows within a cluster interlock; clusters are separate.
-const CLUSTERS = [[2,3],[4,4]];
+const CLUSTERS = [[3,3],[4,4]];
+// Fixed seat: global table index (row-major) -> name. Index 2 = top-right of row 1.
+const FIXED = { 2: "HANS" };
 
 function shuffle(a) {
   a = a.slice();
@@ -54,7 +57,9 @@ function shuffle(a) {
 
 function render() {
   const total = CLUSTERS.flat().reduce((a, b) => a + b, 0);
-  const seats = shuffle([...MEMBERS, ...Array(Math.max(0, total - MEMBERS.length)).fill(null)]);
+  const free = total - Object.keys(FIXED).length;
+  const pool = shuffle([...MEMBERS, ...Array(Math.max(0, free - MEMBERS.length)).fill(null)]);
+  const seats = Array.from({ length: total }, (_, i) => (i in FIXED ? FIXED[i] : pool.shift()));
   const room = document.getElementById("room");
   room.innerHTML = "";
   let k = 0;
@@ -69,7 +74,7 @@ function render() {
       for (let i = 0; i < n; i++) {
         const name = seats[k++];
         const t = document.createElement("div");
-        t.className = "t " + (name ? "filled" : "empty");
+        t.className = "t " + (name ? "filled" : "empty") + (k - 1 in FIXED ? " fixed" : "");
         t.textContent = name || "empty";
         r.appendChild(t);
       }
@@ -78,7 +83,7 @@ function render() {
     room.appendChild(c);
   }
   document.getElementById("note").textContent =
-    `${MEMBERS.length} members, ${total} tables, ${total - MEMBERS.length} empty`;
+    `${MEMBERS.length} shuffled members + HANS fixed, ${total} tables, ${free - MEMBERS.length} empty`;
 }
 document.getElementById("shuffle").onclick = render;
 render();
