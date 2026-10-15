@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team Seating</title>
+<style>
+  :root {
+    --bg: #f5f3ee; --ink: #1d1d1b; --table: #fff; --line: #cfc9bb;
+    --accent: #2f6f5e; --empty: #9a958a;
+    --w: 112px; --h: 64px; --gap: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161715; --ink: #ecebe6; --table: #232522; --line: #3d403a; --accent: #6fc0a8; --empty: #7b7d75; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 48px; background: var(--bg); color: var(--ink);
+    font: 16px/1.4 system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+  h1 { margin: 0; font-size: 1.4rem; }
+  button { font: inherit; padding: 10px 22px; border-radius: 8px; border: 0; background: var(--accent);
+    color: #fff; cursor: pointer; }
+  button:active { transform: translateY(1px); }
+  .room { display: flex; flex-direction: column; gap: 40px; align-items: center; max-width: 100%; overflow-x: auto; padding: 8px; }
+  .cluster { display: flex; flex-direction: column; gap: var(--gap); }
+  .row { display: flex; gap: var(--gap); justify-content: center; }
+  /* second row is offset by half a table so it interlocks with the first */
+  .cluster .row + .row { margin-top: calc(var(--h) / -2); }
+  .t { width: var(--w); height: var(--h); background: var(--table); border: 2px solid var(--line);
+    border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 600; text-align: center; }
+  .t.empty { color: var(--empty); font-weight: 400; border-style: dashed; }
+  .t.filled { border-color: var(--accent); }
+  .note { color: var(--empty); font-size: .85rem; }
+</style>
+</head>
+<body>
+<h1>Team Seating</h1>
+<button id="shuffle">Shuffle seats</button>
+<div class="room" id="room"></div>
+<div class="note" id="note"></div>
+
+<script>
+const MEMBERS = ["Dennis","Dominicus","Farrel","Frederick","Johan","Malik","Okto","Tubagus","Wahyu","Yodivan"];
+// Clusters of rows (table counts). Rows within a cluster interlock; clusters are separate.
+const CLUSTERS = [[2,3],[4,4]];
+
+function shuffle(a) {
+  a = a.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function render() {
+  const total = CLUSTERS.flat().reduce((a, b) => a + b, 0);
+  const seats = shuffle([...MEMBERS, ...Array(Math.max(0, total - MEMBERS.length)).fill(null)]);
+  const room = document.getElementById("room");
+  room.innerHTML = "";
+  let k = 0;
+  for (const rows of CLUSTERS) {
+    const c = document.createElement("div");
+    c.className = "cluster";
+    rows.forEach((n, ri) => {
+      const r = document.createElement("div");
+      r.className = "row";
+      // In a 4+4 cluster, shift the second row by half a table to interlock.
+      if (ri === 1 && n === rows[0]) r.style.transform = "translateX(calc((var(--w) + var(--gap)) / 2))";
+      for (let i = 0; i < n; i++) {
+        const name = seats[k++];
+        const t = document.createElement("div");
+        t.className = "t " + (name ? "filled" : "empty");
+        t.textContent = name || "empty";
+        r.appendChild(t);
+      }
+      c.appendChild(r);
+    });
+    room.appendChild(c);
+  }
+  document.getElementById("note").textContent =
+    `${MEMBERS.length} members, ${total} tables, ${total - MEMBERS.length} empty`;
+}
+document.getElementById("shuffle").onclick = render;
+render();
+</script>
+</body>
+</html>
