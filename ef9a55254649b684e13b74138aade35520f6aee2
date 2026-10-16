@@ -1,0 +1,23 @@
+index.html
+  acfd695e8d3da59f 29-30,33-34,46-56,58-60,71-90,103,106-109,111-112,120,122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "ef9a55254649b684e13b74138aade35520f6aee2",
+  "prompts": {
+    "acfd695e8d3da59f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e20d04cc-510e-49f9-8333-56bb7ad80c96",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Yodivan Perdana Lukito <yodivan.lukito@gdn-commerce.com>",
+      "messages": [],
+      "total_additions": 50,
+      "total_deletions": 16,
+      "accepted_lines": 50,
+      "overriden_lines": 0
+    }
+  }
+}
