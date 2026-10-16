@@ -26,11 +26,12 @@
   /* second row is offset by half a table so it interlocks with the first */
   .cluster .row + .row { margin-top: calc(var(--h) / -2); }
   .t { width: var(--w); height: var(--h); background: var(--table); border: 2px solid var(--line);
-    border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 600; text-align: center; }
+    border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 600;
+    text-align: center; cursor: pointer; user-select: none; font-family: inherit; color: inherit; padding: 0; }
   .t.empty { color: var(--empty); font-weight: 400; border-style: dashed; }
   .t.filled { border-color: var(--accent); }
-  .t.fixed { background: #c62828; border-color: #8e0000; color: #fff; }
-  .note { color: var(--empty); font-size: .85rem; }
+  .t.locked { background: #c62828; border-color: #8e0000; color: #fff; }
+  .note { color: var(--empty); font-size: .85rem; text-align: center; }
 </style>
 </head>
 <body>
@@ -40,11 +41,23 @@
 <div class="note" id="note"></div>
 
 <script>
-const MEMBERS = ["Dennis","Dominicus","Farrel","Frederick","Johan","Malik","Okto","Tubagus","Wahyu","Yodivan"];
 // Clusters of rows (table counts). Rows within a cluster interlock; clusters are separate.
 const CLUSTERS = [[3,3],[4,4]];
-// Fixed seat: global table index (row-major) -> name. Index 2 = top-right of row 1.
-const FIXED = { 2: "HANS" };
+// Starting position, row-major (row1, row2, row3, row4); null = empty table.
+const START = [
+  "Tubagus", null, "HANS",
+  "Okto", "Dennis", "Wahyu",
+  null, "Farrel", "Johan", "Frederick",
+  null, "Dominicus", "Yodivan", "Malik",
+];
+// Seats locked (red) at start: not shuffled.
+const START_LOCKED = [2]; // HANS, top-right
+// Yodivan is this many times more likely to land on rows 2 or 4 than on any other free seat.
+const PREFERRED_WHO = "Yodivan", PREFERRED_ROWS = [1, 3], PREFERRED_WEIGHT = 3;
+
+const rowOf = CLUSTERS.flat().flatMap((n, r) => Array(n).fill(r));
+let seats = START.slice();
+const locked = new Set(START_LOCKED);
 
 function shuffle(a) {
   a = a.slice();
@@ -55,11 +68,29 @@ function shuffle(a) {
   return a;
 }
 
+function rand() { return crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32; }
+
+function reshuffle() {
+  const free = seats.map((_, i) => i).filter(i => !locked.has(i));
+  const pool = free.map(i => seats[i]);
+  const out = seats.slice();
+  let slots = free.slice();
+  // Place the preferred person first, weighted toward preferred rows.
+  const p = pool.indexOf(PREFERRED_WHO);
+  if (p >= 0) {
+    pool.splice(p, 1);
+    const w = slots.map(i => (PREFERRED_ROWS.includes(rowOf[i]) ? PREFERRED_WEIGHT : 1));
+    let r = rand() * w.reduce((a, b) => a + b, 0), k = 0;
+    while (k < w.length - 1 && (r -= w[k]) >= 0) k++;
+    out[slots[k]] = PREFERRED_WHO;
+    slots.splice(k, 1);
+  }
+  const rest = shuffle(pool);
+  slots.forEach((i, n) => { out[i] = rest[n]; });
+  seats = out;
+}
+
 function render() {
-  const total = CLUSTERS.flat().reduce((a, b) => a + b, 0);
-  const free = total - Object.keys(FIXED).length;
-  const pool = shuffle([...MEMBERS, ...Array(Math.max(0, free - MEMBERS.length)).fill(null)]);
-  const seats = Array.from({ length: total }, (_, i) => (i in FIXED ? FIXED[i] : pool.shift()));
   const room = document.getElementById("room");
   room.innerHTML = "";
   let k = 0;
@@ -69,13 +100,16 @@ function render() {
     rows.forEach((n, ri) => {
       const r = document.createElement("div");
       r.className = "row";
-      // In a 4+4 cluster, shift the second row by half a table to interlock.
+      // Equal-length rows: shift the second by half a table to interlock.
       if (ri === 1 && n === rows[0]) r.style.transform = "translateX(calc((var(--w) + var(--gap)) / 2))";
       for (let i = 0; i < n; i++) {
-        const name = seats[k++];
-        const t = document.createElement("div");
-        t.className = "t " + (name ? "filled" : "empty") + (k - 1 in FIXED ? " fixed" : "");
+        const idx = k++, name = seats[idx];
+        const t = document.createElement("button");
+        t.type = "button";
+        t.className = "t " + (name ? "filled" : "empty") + (locked.has(idx) ? " locked" : "");
         t.textContent = name || "empty";
+        t.title = locked.has(idx) ? "Locked – click to unlock" : "Click to lock in place";
+        t.onclick = () => { locked.has(idx) ? locked.delete(idx) : locked.add(idx); render(); };
         r.appendChild(t);
       }
       c.appendChild(r);
@@ -83,9 +117,9 @@ function render() {
     room.appendChild(c);
   }
   document.getElementById("note").textContent =
-    `${MEMBERS.length} shuffled members + HANS fixed, ${total} tables, ${free - MEMBERS.length} empty`;
+    `Click a table to lock it (red) so it stays put when shuffling. ${locked.size} locked.`;
 }
-document.getElementById("shuffle").onclick = render;
+document.getElementById("shuffle").onclick = () => { reshuffle(); render(); };
 render();
 </script>
 </body>
